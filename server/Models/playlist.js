@@ -11,16 +11,15 @@ const playlistSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
-  // Reference to the User who created this playlist
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  // An array of references pointing to the Song model
+  // References community tracks (Track model)
   songs: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Song'
+    ref: 'Track'
   }],
   isPublic: {
     type: Boolean,

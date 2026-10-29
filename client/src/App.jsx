@@ -1,20 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { fetchTracks } from './services/api';
 
-import Sidebar from './components/Sidebar';
-import ArtistView from './components/ArtistView';
-import ListenerView from './components/ListenerView';
+import Sidebar from './Components/Sidebar';
+import ArtistView from './Components/ArtistView';
+import ListenerView from './Components/ListenerView';
 import Register from './pages/Register';
+import Logo from './Components/Logo';
+import PlaylistView from './Components/PlaylistView';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('dashboard'); 
-  const [activeTab, setActiveTab] = useState('home'); 
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSignUpDropdown, setShowSignUpDropdown] = useState(false);
 
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [user, setUser] = useState(null);
-  const [tracks, setTracks] = useState([]);
+  const [tracks, setTracks] = useState({
+    community: [],
+    trending: [],
+    sinhala: [],
+    recommended: [],
+    all: []
+  });
   const [currentTrack, setCurrentTrack] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audio] = useState(new Audio());
@@ -22,6 +30,17 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  // Apply dark / light theme
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#09090b' : '#f4f4f5');
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   useEffect(() => {
     if (token) {
@@ -29,16 +48,18 @@ export default function App() {
         email: localStorage.getItem('userEmail') || 'User',
         role: localStorage.getItem('userRole') || 'listener'
       });
+    } else {
+      setUser(null);
     }
     loadTracks();
   }, [token]);
 
   useEffect(() => {
     const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
+    const updateDuration = () => setDuration(audio.duration || 0);
     const onEnded = () => {
-      const idx = tracks.findIndex(t => t._id === currentTrack?._id);
-      const next = tracks[idx + 1];
+      const idx = tracks.all.findIndex(t => t._id === currentTrack?._id);
+      const next = tracks.all[idx + 1];
       if (next) handlePlayTrack(next);
       else setIsPlaying(false);
     };
@@ -52,7 +73,7 @@ export default function App() {
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', onEnded);
     };
-  }, [audio, tracks, currentTrack]);
+  }, [audio, tracks.all, currentTrack]);
 
   const formatTime = (secs) => {
     if (!secs || isNaN(secs)) return '0:00';
@@ -67,42 +88,66 @@ export default function App() {
       try {
         const res = await fetchTracks();
         if (res && res.data) {
-          communityTracks = res.data.map(track => ({
-            ...track,
-            imageUrl: track.thumbnailPath 
-              ? `http://localhost:5000/${track.thumbnailPath}` 
-              : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300",
-            audioUrl: `http://localhost:5000/${(track.audioUrl || '').replace(/\\/g, '/')}`,
-            isInternational: false
-          }));
+          // FIXED: safe audio URL + populated artist name
+          communityTracks = (Array.isArray(res.data) ? res.data : []).map(track => {
+            const audioPath = (track.audioUrl || '').replace(/\\/g, '/').replace(/^\/+/, '');
+            return {
+              ...track,
+              imageUrl: track.thumbnailPath
+                ? `http://localhost:5000/${track.thumbnailPath}`
+                : 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300',
+              audioUrl: audioPath.startsWith('http')
+                ? audioPath
+                : `http://localhost:5000/${audioPath}`,
+              isInternational: false,
+              category: 'community',
+              artist: track.artist?.name || track.artist || 'Unknown Artist'
+            };
+          });
         }
       } catch (dbErr) {
-        console.warn("Local backend unavailable.", dbErr);
+        console.warn('Local backend unavailable.', dbErr);
       }
 
-      const mockBackupTracks = [
-        { _id: 'mock-1', title: 'Starlight Symphony', genre: 'Synthwave', imageUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-2', title: 'Midnight Echoes', genre: 'Lo-Fi Chill', imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-3', title: 'Neon Horizon', genre: 'Cyberpunk', imageUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-4', title: 'Golden Hour Beat', genre: 'R&B Soul', imageUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-5', title: 'Velocity Core', genre: 'Techno', imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-6', title: 'Ocean Whisper', genre: 'Ambient', imageUrl: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-7', title: 'Retro Groove', genre: 'Disco Funk', imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-8', title: 'Ethereal Space', genre: 'Dream Pop', imageUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-9', title: 'Solar Flare', genre: 'Progressive House', imageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-10', title: 'Digital Rain', genre: 'Glitch Hop', imageUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-11', title: 'Anirudh Mix', genre: 'Composer Focus', imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300', audioUrl: '', isInternational: true },
-        { _id: 'mock-12', title: 'Rahman Vibes', genre: 'Classic Fusion', imageUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300', audioUrl: '', isInternational: true }
-      ];
+      const [trendingRes, sinhalaRes, recommendedRes] = await Promise.all([
+        fetch('https://itunes.apple.com/search?term=top+hits+2025&media=music&limit=8&entity=song'),
+        fetch('https://itunes.apple.com/search?term=sinhala+songs&media=music&limit=8&entity=song&country=LK'),
+        fetch('https://itunes.apple.com/search?term=popular+hits&media=music&limit=8&entity=song')
+      ]);
 
-      if (communityTracks.length > 0) {
-        setTracks([...communityTracks, ...mockBackupTracks]);
-      } else {
-        setTracks(mockBackupTracks);
-      }
+      const [trendingData, sinhalaData, recommendedData] = await Promise.all([
+        trendingRes.json(),
+        sinhalaRes.json(),
+        recommendedRes.json()
+      ]);
 
+      const mapITunes = (results, category) =>
+        results
+          .map(item => ({
+            _id: `itunes-${item.trackId}`,
+            title: item.trackName,
+            artist: item.artistName,
+            genre: item.primaryGenreName,
+            imageUrl: item.artworkUrl100?.replace('100x100', '300x300') || '',
+            audioUrl: item.previewUrl || '',
+            isInternational: true,
+            category
+          }))
+          .filter(t => t.audioUrl);
+
+      const trendingTracks = mapITunes(trendingData.results || [], 'trending');
+      const sinhalaTracks = mapITunes(sinhalaData.results || [], 'sinhala');
+      const recommendedTracks = mapITunes(recommendedData.results || [], 'recommended');
+
+      setTracks({
+        community: communityTracks,
+        trending: trendingTracks,
+        sinhala: sinhalaTracks,
+        recommended: recommendedTracks,
+        all: [...communityTracks, ...trendingTracks, ...sinhalaTracks, ...recommendedTracks]
+      });
     } catch (err) {
-      console.error("Error loading tracks:", err);
+      console.error('Error loading tracks:', err);
     }
   };
 
@@ -120,22 +165,23 @@ export default function App() {
         audio.pause();
         setIsPlaying(false);
       } else {
-        audio.play();
+        audio.play().catch(err => console.warn('Playback failed:', err));
         setIsPlaying(true);
       }
     } else {
       const src = track.audioUrl || '';
       if (!src) {
-        console.warn("No audio URL for this track");
+        console.warn('No audio URL for this track');
         return;
       }
       audio.src = src;
-      audio.play()
+      audio
+        .play()
         .then(() => {
           setCurrentTrack(track);
           setIsPlaying(true);
         })
-        .catch(err => console.warn("Playback failed:", err));
+        .catch(err => console.warn('Playback failed:', err));
     }
   };
 
@@ -149,24 +195,30 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
-  const filteredTracks = tracks.filter(track => 
-    track.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    track.genre?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTracks = tracks.all.filter(
+    track =>
+      track.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      track.genre?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(track.artist || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (currentView === 'login') {
     return (
-      <div className="w-screen h-screen bg-black flex flex-col justify-center items-center p-4">
-        <div className="w-full max-w-md bg-zinc-950 border border-zinc-900 rounded-2xl p-8 relative">
-          <button 
+      <div className="w-screen h-screen bg-soundsoul flex flex-col justify-center items-center p-4 gap-6">
+        <Logo size="lg" className="logo-pulse" />
+        <div className="w-full max-w-md bg-zinc-950/90 backdrop-blur border border-zinc-800 rounded-2xl p-8 relative shadow-2xl shadow-purple-950/20">
+          <button
             onClick={() => setCurrentView('dashboard')}
-            className="absolute top-6 left-6 text-xs font-bold text-zinc-400 hover:text-white flex items-center gap-1.5"
+            className="absolute top-6 left-6 text-xs font-bold text-zinc-400 hover:text-purple-300 flex items-center gap-1.5 transition-colors"
           >
-            ← Back to SoundSoul
+            ← Back
           </button>
           <div className="pt-6">
-            <Register 
-              setToken={(t) => { setToken(t); setCurrentView('dashboard'); }}
+            <Register
+              setToken={(t) => {
+                setToken(t);
+                setCurrentView('dashboard');
+              }}
               isLoginView={true}
               setIsLoginView={(val) => setCurrentView(val ? 'login' : 'register')}
               defaultRole="listener"
@@ -179,17 +231,21 @@ export default function App() {
 
   if (currentView === 'register') {
     return (
-      <div className="w-screen h-screen bg-black flex flex-col justify-center items-center p-4">
-        <div className="w-full max-w-md bg-zinc-950 border border-zinc-900 rounded-2xl p-8 relative">
-          <button 
+      <div className="w-screen h-screen bg-soundsoul flex flex-col justify-center items-center p-4 gap-6">
+        <Logo size="lg" className="logo-pulse" />
+        <div className="w-full max-w-md bg-zinc-950/90 backdrop-blur border border-zinc-800 rounded-2xl p-8 relative shadow-2xl shadow-purple-950/20">
+          <button
             onClick={() => setCurrentView('dashboard')}
-            className="absolute top-6 left-6 text-xs font-bold text-zinc-400 hover:text-white flex items-center gap-1.5"
+            className="absolute top-6 left-6 text-xs font-bold text-zinc-400 hover:text-purple-300 flex items-center gap-1.5 transition-colors"
           >
-            ← Back to SoundSoul
+            ← Back
           </button>
           <div className="pt-6">
-            <Register 
-              setToken={(t) => { setToken(t); setCurrentView('dashboard'); }}
+            <Register
+              setToken={(t) => {
+                setToken(t);
+                setCurrentView('dashboard');
+              }}
               isLoginView={false}
               setIsLoginView={(val) => setCurrentView(val ? 'login' : 'register')}
               defaultRole={initialRegisterRole}
@@ -201,17 +257,17 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-black text-white font-sans overflow-hidden select-none">
-      
-      <header className="h-16 px-6 flex justify-between items-center bg-zinc-950 border-b border-zinc-900 sticky top-0 z-30">
+    <div className="flex flex-col h-screen bg-soundsoul text-white font-sans overflow-hidden select-none relative">
+      <header className="h-16 px-6 flex justify-between items-center ss-header backdrop-blur-md border-b sticky top-0 z-30">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
-          <span className="text-xl text-purple-500">✨</span>
-          <h1 className="text-base font-black tracking-tighter text-white">SoundSoul</h1>
+          <Logo size="md" />
         </div>
 
         <div className="w-full max-w-md mx-4 relative group">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm group-focus-within:text-purple-400 transition-colors">🔍</span>
-          <input 
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 text-sm group-focus-within:text-purple-400 transition-colors">
+            🔍
+          </span>
+          <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -223,16 +279,26 @@ export default function App() {
         <div className="flex items-center gap-3 relative">
           {!token ? (
             <>
-              <button 
-                onClick={() => { setCurrentView('login'); setShowSignUpDropdown(false); }} 
+              <button
+                onClick={() => {
+                  setCurrentView('login');
+                  setShowSignUpDropdown(false);
+                }}
                 className="text-xs font-bold text-zinc-400 hover:text-white px-3 py-2 transition-colors"
               >
                 Sign In
               </button>
 
+              <button
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="text-sm w-9 h-9 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center hover:border-purple-500/50 transition-all"
+              >
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </button>
               <div className="relative">
-                <button 
-                  onClick={() => setShowSignUpDropdown(!showSignUpDropdown)} 
+                <button
+                  onClick={() => setShowSignUpDropdown(!showSignUpDropdown)}
                   className="text-xs font-bold bg-purple-600 text-white px-5 py-2 rounded-full hover:bg-purple-500 transition-all flex items-center gap-1"
                 >
                   Sign Up <span className="text-[10px] opacity-80">{showSignUpDropdown ? '▲' : '▼'}</span>
@@ -242,15 +308,23 @@ export default function App() {
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowSignUpDropdown(false)} />
                     <div className="absolute right-0 mt-2 w-48 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl p-1.5 z-50">
-                      <button 
-                        onClick={() => { setInitialRegisterRole('listener'); setCurrentView('register'); setShowSignUpDropdown(false); }}
+                      <button
+                        onClick={() => {
+                          setInitialRegisterRole('listener');
+                          setCurrentView('register');
+                          setShowSignUpDropdown(false);
+                        }}
                         className="w-full text-left text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 px-3 py-2.5 rounded-lg transition-colors flex items-center gap-2"
                       >
                         🎧 <span>Join as Listener</span>
                       </button>
                       <div className="h-px bg-zinc-900 my-1" />
-                      <button 
-                        onClick={() => { setInitialRegisterRole('artist'); setCurrentView('register'); setShowSignUpDropdown(false); }}
+                      <button
+                        onClick={() => {
+                          setInitialRegisterRole('artist');
+                          setCurrentView('register');
+                          setShowSignUpDropdown(false);
+                        }}
                         className="w-full text-left text-xs font-medium text-zinc-300 hover:text-white hover:bg-zinc-900 px-3 py-2.5 rounded-lg transition-colors flex items-center gap-2"
                       >
                         🎸 <span>Join as Artist</span>
@@ -262,46 +336,107 @@ export default function App() {
             </>
           ) : (
             <div className="flex items-center gap-4">
-              <span className="text-xs text-zinc-400 font-medium hidden md:inline">Studio Node: <strong className="text-white">{user?.email}</strong></span>
-              <button onClick={handleLogout} className="text-xs bg-zinc-900 text-zinc-400 font-bold py-2 px-4 rounded-full border border-zinc-800 transition-all">Sign Out</button>
+              <span className="text-xs text-zinc-400 font-medium hidden md:inline">
+                Studio Node: <strong className="text-white">{user?.email}</strong>
+              </span>
+              <button
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="text-sm w-9 h-9 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center hover:border-purple-500/50 transition-all"
+              >
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="text-xs bg-zinc-900 text-zinc-400 font-bold py-2 px-4 rounded-full border border-zinc-800 transition-all"
+              >
+                Sign Out
+              </button>
             </div>
           )}
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0 p-2 gap-2">
-        <Sidebar userRole={user?.role || 'guest'} activeTab={activeTab} setActiveTab={setActiveTab} />
-        
-        <div className="flex-1 bg-gradient-to-b from-zinc-900/60 to-black rounded-xl overflow-y-auto flex flex-col border border-zinc-900/40">
-          <main className="p-6 flex-1">
-            {activeTab === 'home' && (
-              <div className="p-6 mb-6 rounded-xl bg-gradient-to-r from-purple-950/20 via-zinc-900/50 to-transparent border border-purple-500/10">
-                <h2 className="text-2xl font-black text-white">Uncover Fresh Waves</h2>
-                <p className="text-zinc-400 text-xs mt-1">Streaming live global hits directly from official metadata networks, synced with community creators.</p>
-              </div>
-            )}
+      <div className="flex flex-1 min-h-0 p-2 gap-2 pb-16 md:pb-2">
+        {/* Desktop sidebar */}
+        <div className="hidden md:block">
+          <Sidebar userRole={user?.role || 'guest'} activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
 
-            {user?.role === 'artist' ? (
-              <ArtistView activeTab={activeTab} tracks={filteredTracks} currentTrack={currentTrack} isPlaying={isPlaying} onPlayTrack={handlePlayTrack} refreshTracks={loadTracks} />
+        <div className="flex-1 bg-gradient-to-b from-zinc-900/40 to-transparent rounded-xl overflow-y-auto flex flex-col border border-zinc-800/40">
+          <main className="p-4 sm:p-6 flex-1">
+            {activeTab === 'playlists' ? (
+              <PlaylistView
+                token={token}
+                allTracks={tracks.community}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onPlayTrack={handlePlayTrack}
+              />
+            ) : user?.role === 'artist' && (activeTab === 'upload' || activeTab === 'catalog') ? (
+              <ArtistView
+                activeTab={activeTab}
+                tracks={searchQuery ? filteredTracks : tracks.community}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onPlayTrack={handlePlayTrack}
+                refreshTracks={loadTracks}
+              />
             ) : (
-              <ListenerView activeTab={activeTab} tracks={filteredTracks} currentTrack={currentTrack} isPlaying={isPlaying} onPlayTrack={handlePlayTrack} />
+              <ListenerView
+                activeTab={activeTab}
+                tracks={searchQuery ? filteredTracks : tracks}
+                currentTrack={currentTrack}
+                isPlaying={isPlaying}
+                onPlayTrack={handlePlayTrack}
+              />
             )}
           </main>
         </div>
       </div>
 
-      <footer className="h-24 bg-zinc-950 border-t border-zinc-900 px-6 flex items-center justify-between z-10">
-        
-        {/* Left — Current Track Info */}
+      {/* Mobile bottom navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 ss-header backdrop-blur-md border-t px-2 py-1.5 flex items-center justify-around safe-area-pb">
+        {[
+          { tab: 'home', icon: '🏠', label: 'Home' },
+          { tab: 'trending', icon: '🔥', label: 'Trending' },
+          { tab: 'playlists', icon: '📚', label: 'Playlists' },
+          ...(user?.role === 'artist'
+            ? [
+                { tab: 'catalog', icon: '💿', label: 'Studio' },
+                { tab: 'upload', icon: '📤', label: 'Upload' },
+              ]
+            : []),
+        ].map((item) => (
+          <button
+            key={item.tab}
+            onClick={() => setActiveTab(item.tab)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[56px] ${
+              activeTab === item.tab ? 'text-purple-400' : 'text-zinc-500'
+            }`}
+          >
+            <span className="text-lg leading-none">{item.icon}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wide">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <footer className="h-20 sm:h-24 ss-player backdrop-blur-md border-t px-3 sm:px-6 flex items-center justify-between z-20 mb-14 md:mb-0">
         <div className="w-1/4 flex items-center gap-3">
           {currentTrack ? (
             <>
               <div className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-md overflow-hidden flex items-center justify-center text-sm">
-                {currentTrack.imageUrl ? <img src={currentTrack.imageUrl} alt="" className="w-full h-full object-cover" /> : '🎵'}
+                {currentTrack.imageUrl ? (
+                  <img src={currentTrack.imageUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  '🎵'
+                )}
               </div>
               <div className="min-w-0">
                 <h4 className="text-xs font-bold text-white truncate">{currentTrack.title}</h4>
-                <p className="text-[10px] text-zinc-500 truncate uppercase tracking-wider">{currentTrack.genre}</p>
+                <p className="text-[10px] text-zinc-500 truncate uppercase tracking-wider">
+                  {currentTrack.artist?.name || currentTrack.artist || currentTrack.genre}
+                </p>
               </div>
             </>
           ) : (
@@ -309,13 +444,12 @@ export default function App() {
           )}
         </div>
 
-        {/* Center — Player Controls */}
         <div className="flex flex-col items-center gap-2 w-2/4 max-w-xl">
           <div className="flex items-center gap-4">
             <button
               onClick={() => {
-                const idx = tracks.findIndex(t => t._id === currentTrack?._id);
-                const prev = tracks[idx - 1];
+                const idx = tracks.all.findIndex(t => t._id === currentTrack?._id);
+                const prev = tracks.all[idx - 1];
                 if (prev) handlePlayTrack(prev);
               }}
               disabled={!currentTrack}
@@ -334,8 +468,8 @@ export default function App() {
 
             <button
               onClick={() => {
-                const idx = tracks.findIndex(t => t._id === currentTrack?._id);
-                const next = tracks[idx + 1];
+                const idx = tracks.all.findIndex(t => t._id === currentTrack?._id);
+                const next = tracks.all[idx + 1];
                 if (next) handlePlayTrack(next);
               }}
               disabled={!currentTrack}
@@ -362,7 +496,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right — Volume Control */}
         <div className="w-1/4 flex items-center justify-end gap-2">
           <span className="text-zinc-400 text-sm">🔊</span>
           <input

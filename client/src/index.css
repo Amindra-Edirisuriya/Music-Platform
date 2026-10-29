@@ -3,9 +3,233 @@
 @utility scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
-  
-  /* Target the webkit pseudo-element using standard CSS nesting */
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* ========== Theme variables ========== */
+:root,
+[data-theme="dark"] {
+  --ss-bg: #09090b;
+  --ss-bg-elevated: #18181b;
+  --ss-bg-card: rgba(24, 24, 27, 0.75);
+  --ss-bg-soft: #27272a;
+  --ss-border: #3f3f46;
+  --ss-border-soft: rgba(63, 63, 70, 0.6);
+  --ss-text: #fafafa;
+  --ss-text-muted: #a1a1aa;
+  --ss-text-dim: #71717a;
+  --ss-accent: #a855f7;
+  --ss-accent-soft: rgba(168, 85, 247, 0.2);
+  --ss-glow: rgba(124, 58, 237, 0.18);
+  --ss-glow-2: rgba(88, 28, 135, 0.12);
+  --ss-player: rgba(9, 9, 11, 0.92);
+  --ss-header: rgba(9, 9, 11, 0.85);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --ss-bg: #f4f4f5;
+  --ss-bg-elevated: #ffffff;
+  --ss-bg-card: rgba(255, 255, 255, 0.9);
+  --ss-bg-soft: #e4e4e7;
+  --ss-border: #d4d4d8;
+  --ss-border-soft: rgba(212, 212, 216, 0.8);
+  --ss-text: #18181b;
+  --ss-text-muted: #52525b;
+  --ss-text-dim: #71717a;
+  --ss-accent: #7c3aed;
+  --ss-accent-soft: rgba(124, 58, 237, 0.12);
+  --ss-glow: rgba(124, 58, 237, 0.1);
+  --ss-glow-2: rgba(167, 139, 250, 0.08);
+  --ss-player: rgba(255, 255, 255, 0.95);
+  --ss-header: rgba(255, 255, 255, 0.9);
+  color-scheme: light;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--ss-bg);
+  color: var(--ss-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* App shell background */
+.bg-soundsoul {
+  background-color: var(--ss-bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, var(--ss-glow), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, var(--ss-glow-2), transparent);
+  background-attachment: fixed;
+  color: var(--ss-text);
+}
+
+.glass-card {
+  background: var(--ss-bg-card);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--ss-border-soft);
+}
+
+/* Theme-aware surface helpers */
+.ss-header {
+  background: var(--ss-header);
+  border-color: var(--ss-border-soft);
+  color: var(--ss-text);
+}
+.ss-player {
+  background: var(--ss-player);
+  border-color: var(--ss-border-soft);
+  color: var(--ss-text);
+}
+.ss-panel {
+  background: var(--ss-bg-elevated);
+  border-color: var(--ss-border);
+  color: var(--ss-text);
+}
+.ss-muted { color: var(--ss-text-muted); }
+.ss-dim { color: var(--ss-text-dim); }
+.ss-border { border-color: var(--ss-border); }
+.ss-input {
+  background: var(--ss-bg);
+  border: 1px solid var(--ss-border);
+  color: var(--ss-text);
+}
+.ss-input:focus {
+  outline: none;
+  border-color: var(--ss-accent);
+}
+
+/* Light mode: soften hard-coded dark Tailwind classes used in components */
+[data-theme="light"] .bg-black,
+[data-theme="light"] .bg-zinc-950,
+[data-theme="light"] .bg-zinc-950\/90,
+[data-theme="light"] .bg-zinc-950\/80,
+[data-theme="light"] .bg-zinc-950\/40,
+[data-theme="light"] .bg-zinc-900,
+[data-theme="light"] .bg-zinc-900\/50,
+[data-theme="light"] .bg-zinc-900\/60,
+[data-theme="light"] .bg-zinc-900\/40,
+[data-theme="light"] .bg-zinc-900\/20 {
+  background-color: var(--ss-bg-elevated) !important;
+}
+
+[data-theme="light"] .from-zinc-900\/60,
+[data-theme="light"] .from-zinc-900\/40,
+[data-theme="light"] .to-black,
+[data-theme="light"] .to-transparent {
+  --tw-gradient-from: #f4f4f5 !important;
+  --tw-gradient-to: transparent !important;
+}
+
+[data-theme="light"] .text-white {
+  color: var(--ss-text) !important;
+}
+[data-theme="light"] .text-zinc-100,
+[data-theme="light"] .text-zinc-200,
+[data-theme="light"] .text-zinc-300 {
+  color: #3f3f46 !important;
+}
+[data-theme="light"] .text-zinc-400,
+[data-theme="light"] .text-zinc-500 {
+  color: var(--ss-text-muted) !important;
+}
+[data-theme="light"] .text-zinc-600 {
+  color: var(--ss-text-dim) !important;
+}
+
+[data-theme="light"] .border-zinc-900,
+[data-theme="light"] .border-zinc-900\/40,
+[data-theme="light"] .border-zinc-900\/50,
+[data-theme="light"] .border-zinc-800,
+[data-theme="light"] .border-zinc-800\/60,
+[data-theme="light"] .border-zinc-800\/80,
+[data-theme="light"] .border-zinc-800\/50,
+[data-theme="light"] .border-zinc-700 {
+  border-color: var(--ss-border) !important;
+}
+
+[data-theme="light"] .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--ss-border) !important;
+}
+
+[data-theme="light"] .bg-zinc-800,
+[data-theme="light"] .bg-zinc-800\/20,
+[data-theme="light"] .hover\:bg-zinc-800:hover,
+[data-theme="light"] .hover\:bg-zinc-900\/50:hover,
+[data-theme="light"] .hover\:bg-zinc-900\/60:hover {
+  background-color: var(--ss-bg-soft) !important;
+}
+
+[data-theme="light"] .placeholder-zinc-500::placeholder {
+  color: #a1a1aa !important;
+}
+
+[data-theme="light"] .from-purple-950\/40,
+[data-theme="light"] .via-zinc-900\/80,
+[data-theme="light"] .to-zinc-950 {
+  background-image: linear-gradient(to bottom right, rgba(124, 58, 237, 0.12), #ffffff, #f4f4f5) !important;
+}
+
+[data-theme="light"] .bg-purple-950\/30,
+[data-theme="light"] .bg-purple-950\/40,
+[data-theme="light"] .bg-purple-600\/20 {
+  background-color: var(--ss-accent-soft) !important;
+}
+
+[data-theme="light"] input[type="range"]::-webkit-slider-runnable-track,
+[data-theme="light"] input[type="range"]::-moz-range-track {
+  background: #d4d4d8;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.45s ease-out forwards;
+}
+
+@keyframes softPulse {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.35)); }
+  50%      { filter: drop-shadow(0 0 14px rgba(168, 85, 247, 0.55)); }
+}
+.logo-pulse {
+  animation: softPulse 3s ease-in-out infinite;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #3f3f46;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #a855f7;
+  margin-top: -4px;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.5);
+}
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: #3f3f46;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #a855f7;
+  border: none;
+  cursor: pointer;
 }

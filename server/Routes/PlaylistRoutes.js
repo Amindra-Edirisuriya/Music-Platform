@@ -1,16 +1,22 @@
 const express = require('express');
 const router = express.Router();
+const {
+  createPlaylist,
+  getUserPlaylists,
+  addSongToPlaylist,
+  getMyPlaylists,
+  updatePlaylist,
+  deletePlaylist,
+  removeSongFromPlaylist
+} = require('../controllers/playlistController');
+const { protect } = require('../Middleware/auth.js');
 
-// Corrected to lowercase 'controllers' here as well
-const { createPlaylist, getUserPlaylists, addSongToPlaylist } = require('../controllers/playlistController');
-
-// POST /api/playlists - Create a new playlist
-router.post('/', createPlaylist);
-
-// GET /api/playlists/:userId - Fetch all playlists for a specific user
-router.get('/:userId', getUserPlaylists);
-
-// PUT /api/playlists/:id/add - Add a song to a specific playlist
-router.put('/:id/add', addSongToPlaylist);
+router.post('/', protect, createPlaylist);
+router.get('/me', protect, getMyPlaylists);
+router.get('/:userId', protect, getUserPlaylists);
+router.put('/:id', protect, updatePlaylist);
+router.delete('/:id', protect, deletePlaylist);
+router.put('/:id/add', protect, addSongToPlaylist);
+router.delete('/:id/songs/:songId', protect, removeSongFromPlaylist);
 
 module.exports = router;

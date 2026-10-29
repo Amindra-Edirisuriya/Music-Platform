@@ -2,36 +2,52 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-// 🌟 Added getArtistTracks to the controller imports
-const { uploadTrack, getAllTracks, getArtistTracks } = require('../controllers/trackController');
+const fs = require('fs');
+const {
+  uploadTrack,
+  getAllTracks,
+  getArtistTracks,
+  updateTrack,
+  deleteTrack
+} = require('../controllers/trackController');
 const { protect, authorizeRoles } = require('../Middleware/auth.js');
 
-// Configure Multer storage engine
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Saves files into your server/uploads/ folder
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    cb(null, `${Date.now()}-${safeName}`);
   }
 });
 
-// File filter to ensure only audio files are accepted
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('audio/')) {
+  if (file.mimetype && file.mimetype.startsWith('audio/')) {
     cb(null, true);
   } else {
     cb(new Error('Only audio files are allowed!'), false);
   }
 };
 
-const upload = multer({ storage, fileFilter });
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 50 * 1024 * 1024 }
+});
 
-// Routes definitions
+// Public browse
+router.get('/', getAllTracks);
+
+// Artist-only
 router.post('/upload', protect, authorizeRoles('artist'), upload.single('audio'), uploadTrack);
-router.get('/', protect, getAllTracks);
-
-// 🔍 🌟 Fetch all tracks belonging to the logged-in artist
 router.get('/my-catalog', protect, authorizeRoles('artist'), getArtistTracks);
+router.put('/:id', protect, authorizeRoles('artist'), updateTrack);
+router.delete('/:id', protect, authorizeRoles('artist'), deleteTrack);
 
 module.exports = router;
