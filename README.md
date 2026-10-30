@@ -202,8 +202,8 @@ npm run preview  # preview build
 | Item | Detail |
 |------|--------|
 | Module | EC4307 Web Application Development |
-| Deliverable | Mini project (CRUD web app + report + demo video) |
-| GitHub | https://github.com/Amindra-12345/Music-Platform |
+| GitHub | https://github.com/Amindra-12345/Music-Platform (older one )
+https://github.com/Amindra-Edirisuriya/Music-Platform(new one because of changing username) |
 
 ---
 
