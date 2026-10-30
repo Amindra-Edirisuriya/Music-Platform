@@ -2,7 +2,7 @@
   "name": "server",
   "private": true,
   "scripts": {
-    "start": "bun server.js",
+    "start": "node server.js",
     "dev": "bun --watch server.js"
   },
   "devDependencies": {
